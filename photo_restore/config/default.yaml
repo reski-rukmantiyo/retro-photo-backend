@@ -1,0 +1,45 @@
+processing:
+  max_image_size: 4096
+  memory_limit_gb: 4.0
+  temp_cleanup: true
+  supported_formats:
+    - jpg
+    - jpeg
+    - png
+    - tiff
+    - bmp
+    - webp
+  # CPU-optimized tile settings for 4GB RAM
+  tile_size: 400  # Reduced for CPU efficiency
+  tile_overlap: 20  # Reduced overlap saves memory
+  cpu_optimization:
+    torch_threads: 2  # Limit PyTorch threads
+    numpy_threads: 2  # Limit NumPy threads
+    memory_cleanup_threshold: 0.8  # Clean when 80% memory used
+    adaptive_tiling: true  # Dynamic tile size based on available memory
+  quality_settings:
+    fast:
+      tile_size: 256
+      tile_overlap: 10
+      model_variant: "light"
+    balanced:
+      tile_size: 400
+      tile_overlap: 20
+      model_variant: "standard"
+    best:
+      tile_size: 512
+      tile_overlap: 32
+      model_variant: "standard"
+
+models:
+  cache_dir: "~/.photo-restore/models"
+  download_timeout: 300
+  esrgan_model: "RealESRGAN_x4plus"
+  gfpgan_model: "GFPGANv1.3"
+  face_detection_threshold: 0.5
+
+logging:
+  level: "INFO"
+  format: "detailed"
+  file: null
+  max_size_mb: 10
