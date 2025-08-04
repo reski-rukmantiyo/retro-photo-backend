@@ -10,7 +10,8 @@ class MockRealESRGANer:
     """Mock Real-ESRGAN model for testing."""
     
     def __init__(self, scale: int = 4, model_path: str = "", device: str = "cpu", 
-                 tile: int = 512, tile_pad: int = 32, pre_pad: int = 0, half: bool = False):
+                 tile: int = 512, tile_pad: int = 32, pre_pad: int = 0, half: bool = False,
+                 gpu_id=None, dni_weight=None):
         """Initialize mock Real-ESRGAN model."""
         self.scale = scale
         self.model_path = model_path
@@ -19,6 +20,8 @@ class MockRealESRGANer:
         self.tile_pad = tile_pad
         self.pre_pad = pre_pad
         self.half = half
+        self.gpu_id = gpu_id
+        self.dni_weight = dni_weight
         
         # Track calls for testing
         self.enhance_calls = []

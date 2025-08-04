@@ -286,7 +286,7 @@ class ImageProcessor:
         enhanced_tiles = []
         for y, y_end, x, x_end in tiles:
             tile = image[y:y_end, x:x_end]
-            enhanced_tile = model.enhance(tile)
+            enhanced_tile, _ = model.enhance(tile)
             enhanced_tiles.append((enhanced_tile, y, y_end, x, x_end))
         
         # Reconstruct image from tiles

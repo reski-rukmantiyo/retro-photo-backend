@@ -172,7 +172,16 @@ class TestModelManager:
     def test_load_esrgan_model_already_loaded(self, model_manager):
         """Test loading ESRGAN when already loaded with same scale."""
         with patch_realesrgan_import():
-            with patch.object(model_manager, 'download_model', return_value=True) as mock_download:\n                # Load once\n                model_manager.load_esrgan_model(scale=4)\n                mock_download.reset_mock()\n                \n                # Load again with same scale\n                success = model_manager.load_esrgan_model(scale=4)\n                \n                assert success is True\n                mock_download.assert_not_called()  # Should not download again
+            with patch.object(model_manager, 'download_model', return_value=True) as mock_download:
+                # Load once
+                model_manager.load_esrgan_model(scale=4)
+                mock_download.reset_mock()
+                
+                # Load again with same scale
+                success = model_manager.load_esrgan_model(scale=4)
+                
+                assert success is True
+                mock_download.assert_not_called()  # Should not download again
     
     def test_load_esrgan_model_download_failure(self, model_manager):
         """Test ESRGAN loading with download failure."""
