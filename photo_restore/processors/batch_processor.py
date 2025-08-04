@@ -136,9 +136,13 @@ class BatchProcessor:
             for file_path in directory.glob(pattern):
                 if file_path.is_file() and file_path.suffix.lower() in supported_extensions:
                     # Check file size
-                    file_size = file_path.stat().st_size
-                    if file_size > 20 * 1024 * 1024:  # 20MB limit
-                        self.logger.warning(f"Skipping large file: {file_path} ({file_size/1024/1024:.1f}MB)")
+                    try:
+                        file_size = file_path.stat().st_size
+                        if file_size > 20 * 1024 * 1024:  # 20MB limit
+                            self.logger.warning(f"Skipping large file: {file_path} ({file_size/1024/1024:.1f}MB)")
+                            continue
+                    except (OSError, TypeError) as e:
+                        self.logger.warning(f"Could not check file size for {file_path}: {e}")
                         continue
                     
                     image_files.append(file_path)

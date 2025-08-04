@@ -121,9 +121,11 @@ class TestBatchProcessor:
             original_stat = Path.stat
             def new_stat(self):
                 if 'large.jpg' in str(self):
-                    mock_result = MagicMock()
-                    mock_result.st_size = 25 * 1024 * 1024
-                    return mock_result
+                    # Create a simple object instead of MagicMock
+                    class MockStat:
+                        def __init__(self):
+                            self.st_size = 25 * 1024 * 1024  # 25MB
+                    return MockStat()
                 return original_stat(self)
             
             with patch.object(Path, 'stat', new_stat):
