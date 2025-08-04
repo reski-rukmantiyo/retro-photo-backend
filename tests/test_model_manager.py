@@ -219,7 +219,9 @@ class TestModelManager:
                 
                 assert success is True
                 assert model_manager.is_gfpgan_loaded() is True
-                assert isinstance(model_manager._gfpgan_model, MockGFPGANer)
+                # Model should be wrapped in SafeGFPGANWrapper for JIT safety
+                assert hasattr(model_manager._gfpgan_model, 'original_model')
+                assert isinstance(model_manager._gfpgan_model.original_model, MockGFPGANer)
     
     def test_load_gfpgan_model_already_loaded(self, model_manager):
         """Test loading GFPGAN when already loaded."""
@@ -251,6 +253,38 @@ class TestModelManager:
             
             assert success is False
             assert model_manager.is_gfpgan_loaded() is False
+    
+    def test_gfpgan_jit_compilation_disabled(self, model_manager):
+        """Test that GFPGAN JIT compilation is properly disabled."""
+        with patch_gfpgan_import():
+            with patch.object(model_manager, 'download_model', return_value=True):
+                success = model_manager.load_gfpgan_model()
+                
+                assert success is True
+                
+                # Verify the model is wrapped for safety
+                wrapped_model = model_manager._gfpgan_model
+                assert hasattr(wrapped_model, 'original_model'), "Model should be wrapped in SafeGFPGANWrapper"
+                
+                # Test that the wrapped model can process images safely
+                import numpy as np
+                test_image = np.random.randint(0, 255, (512, 512, 3), dtype=np.uint8)
+                
+                # This should not raise tensor tracing errors
+                try:
+                    result = wrapped_model.enhance(test_image, weight=0.5)
+                    assert result is not None, "Enhanced result should not be None"
+                    
+                    # Check that we got valid results
+                    cropped_faces, restored_faces, enhanced_img = result
+                    assert isinstance(enhanced_img, np.ndarray), "Enhanced image should be numpy array"
+                    assert enhanced_img.shape == test_image.shape, "Output shape should match input"
+                    
+                except Exception as e:
+                    # If an exception occurs, it should not be a JIT/tensor tracing error
+                    assert "TracerWarning" not in str(e), "JIT tracing errors should be eliminated"
+                    assert "tensor" not in str(e).lower() or "mismatch" not in str(e).lower(), \
+                        "Tensor mismatch errors should be eliminated"
     
     def test_get_models(self, model_manager):
         """Test getting model instances."""

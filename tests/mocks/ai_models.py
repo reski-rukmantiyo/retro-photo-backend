@@ -101,6 +101,12 @@ class MockGFPGANer:
         self.face_threshold = 0.5
         
         self._loaded = True
+        
+        # Add gfpgan attribute to simulate the actual GFPGAN model structure
+        # This is needed for the JIT compilation tests in model_manager.py
+        self.gfpgan = MagicMock()
+        self.gfpgan.eval = MagicMock()
+        self.gfpgan.parameters = MagicMock(return_value=[])  # Empty parameters for CPU optimization tests
     
     def enhance(self, img: np.ndarray, has_aligned: bool = False, 
                 only_center_face: bool = False, paste_back: bool = True,
