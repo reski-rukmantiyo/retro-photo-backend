@@ -100,30 +100,11 @@ def emergency_realesrgan_loader(model_path: Path, scale: int = 4, device: str = 
     Fixes NoneType load_state_dict error.
     """
     try:
-        # Try direct architecture import (bypass problematic modules)
+        # SECURITY: Use safe import only - no dynamic module loading
         try:
-            # Import just the architecture file directly
-            import sys
-            import importlib.util
-            from pathlib import Path as ImportPath
-            
-            # Try to find and import RRDBNet directly
-            venv_path = ImportPath(__file__).parent.parent.parent / 'venv'
-            basicsr_arch_path = venv_path / 'lib/python3.12/site-packages/basicsr/archs/rrdbnet_arch.py'
-            
-            if basicsr_arch_path.exists():
-                spec = importlib.util.spec_from_file_location("rrdbnet_arch", basicsr_arch_path)
-                rrdbnet_module = importlib.util.module_from_spec(spec)
-                
-                # Mock torch.nn to avoid dependency issues
-                import torch.nn as nn
-                sys.modules['torch.nn'] = nn
-                
-                spec.loader.exec_module(rrdbnet_module)
-                RRDBNet = rrdbnet_module.RRDBNet
-                logger.info("Using direct BasicSR RRDBNet import")
-            else:
-                raise ImportError("Direct import failed")
+            # Only use official package imports, no dynamic loading
+            from basicsr.archs.rrdbnet_arch import RRDBNet
+            logger.info("Using safe BasicSR RRDBNet import")
                 
         except ImportError:
             # Fallback: Create RRDBNet architecture manually
@@ -147,8 +128,15 @@ def emergency_realesrgan_loader(model_path: Path, scale: int = 4, device: str = 
         
         logger.info(f"Created RRDBNet model: {type(model)}")
         
-        # Load state dict manually
-        state_dict = torch.load(str(model_path), map_location=device)
+        # SECURITY: Load state dict with weights_only=True to prevent code execution
+        try:
+            # Use weights_only for PyTorch >= 1.13 to prevent arbitrary code execution
+            state_dict = torch.load(str(model_path), map_location=device, weights_only=True)
+            logger.info("Using secure torch.load with weights_only=True")
+        except TypeError:
+            # Fallback for older PyTorch versions with warning
+            logger.warning("SECURITY WARNING: Using legacy torch.load - upgrade PyTorch recommended")
+            state_dict = torch.load(str(model_path), map_location=device)
         
         # Handle different state dict formats
         if 'params_ema' in state_dict:

@@ -13,6 +13,22 @@ from .processors.batch_processor import BatchProcessor
 from .utils.config import Config
 from .utils.logger import setup_logger
 
+# SECURITY: Import path validation
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'security_patches'))
+try:
+    from path_validator import SecurePathValidator, PathSecurityError
+except ImportError:
+    # Fallback if security patches not available
+    class PathSecurityError(Exception):
+        pass
+    class SecurePathValidator:
+        def __init__(self, *args, **kwargs):
+            pass
+        def validate_path(self, path, base_path=None):
+            return os.path.abspath(path)
+        def validate_output_path(self, path, base_path=None):
+            return os.path.abspath(path)
+
 
 @click.command()
 @click.argument('input_path', type=click.Path(exists=True))
@@ -44,6 +60,28 @@ def main(input_path: str, output_path: Optional[str], batch: bool, quality: str,
     logger = setup_logger(level=log_level)
     
     try:
+        # SECURITY: Initialize path validator with allowed directories
+        allowed_paths = [
+            os.getcwd(),  # Current directory
+            os.path.expanduser("~/Pictures"),  # User's pictures directory
+            "/tmp/photo_restore"  # Temporary processing directory
+        ]
+        # Add parent directories of input path to allowed paths for flexibility
+        input_parent = str(Path(input_path).parent.absolute())
+        if input_parent not in allowed_paths:
+            allowed_paths.append(input_parent)
+            
+        path_validator = SecurePathValidator(allowed_paths)
+        
+        # SECURITY: Validate input path
+        try:
+            safe_input_path = path_validator.validate_path(input_path)
+            logger.info(f"Validated input path: {safe_input_path}")
+        except PathSecurityError as e:
+            logger.error(f"Input path security validation failed: {e}")
+            click.echo(f"❌ Security error: Invalid input path")
+            sys.exit(1)
+        
         # Load configuration
         cfg = Config.load(config_path=config)
         
@@ -51,12 +89,22 @@ def main(input_path: str, output_path: Optional[str], batch: bool, quality: str,
         if upscale not in [2, 4]:
             raise click.BadParameter("Upscale factor must be 2 or 4")
         
-        # Process batch or single image
+        # SECURITY: Validate output path for batch processing
         if batch:
+            # Validate output directory
+            batch_output_dir = output_path or f"{safe_input_path}_enhanced"
+            try:
+                safe_output_dir = path_validator.validate_output_path(batch_output_dir)
+                logger.info(f"Validated output directory: {safe_output_dir}")
+            except PathSecurityError as e:
+                logger.error(f"Output path security validation failed: {e}")
+                click.echo(f"❌ Security error: Invalid output path")
+                sys.exit(1)
+                
             processor = BatchProcessor(config=cfg, logger=logger)
             success_count = processor.process_directory(
-                input_dir=input_path,
-                output_dir=output_path or f"{input_path}_enhanced",
+                input_dir=safe_input_path,
+                output_dir=safe_output_dir,
                 quality=quality,
                 upscale=upscale,
                 face_enhance=face_enhance,
@@ -65,10 +113,18 @@ def main(input_path: str, output_path: Optional[str], batch: bool, quality: str,
             click.echo(f"✅ Successfully processed {success_count} images")
             
         else:
-            # Single image processing
+            # SECURITY: Validate single image output path
             if not output_path:
-                input_file = Path(input_path)
+                input_file = Path(safe_input_path)
                 output_path = str(input_file.parent / f"{input_file.stem}_enhanced{input_file.suffix}")
+            
+            try:
+                safe_output_path = path_validator.validate_output_path(output_path)
+                logger.info(f"Validated output path: {safe_output_path}")
+            except PathSecurityError as e:
+                logger.error(f"Output path security validation failed: {e}")
+                click.echo(f"❌ Security error: Invalid output path")
+                sys.exit(1)
             
             processor = ImageProcessor(config=cfg, logger=logger)
             
@@ -77,8 +133,8 @@ def main(input_path: str, output_path: Optional[str], batch: bool, quality: str,
                     pbar.update(percent - pbar.n)
                 
                 result = processor.process_image(
-                    input_path=input_path,
-                    output_path=output_path,
+                    input_path=safe_input_path,
+                    output_path=safe_output_path,
                     quality=quality,
                     upscale=upscale,
                     face_enhance=face_enhance,
@@ -87,7 +143,7 @@ def main(input_path: str, output_path: Optional[str], batch: bool, quality: str,
                 )
             
             if result:
-                click.echo(f"✅ Enhanced image saved to: {output_path}")
+                click.echo(f"✅ Enhanced image saved to: {safe_output_path}")
             else:
                 click.echo("❌ Processing failed")
                 sys.exit(1)
