@@ -41,6 +41,7 @@ class ImageProcessor:
         upscale: int = 4,
         face_enhance: bool = True,
         output_format: str = 'jpg',
+        gfpgan_version: str = 'auto',
         progress_callback: Optional[Callable[[int], None]] = None
     ) -> bool:
         """
@@ -53,6 +54,7 @@ class ImageProcessor:
             upscale: Upscale factor (2 or 4)
             face_enhance: Enable face enhancement
             output_format: Output format (jpg/png)
+            gfpgan_version: GFPGAN version (v1.3/v1.4/auto)
             progress_callback: Optional progress callback function
             
         Returns:
@@ -74,7 +76,7 @@ class ImageProcessor:
                     progress_callback(15)
                 
                 # Load models based on requirements
-                self._ensure_models_loaded(upscale, face_enhance, quality)
+                self._ensure_models_loaded(upscale, face_enhance, quality, gfpgan_version)
                 
                 if progress_callback:
                     progress_callback(30)
@@ -146,8 +148,8 @@ class ImageProcessor:
             self.logger.error(f"Error loading image {input_path}: {str(e)}")
             return None
     
-    def _ensure_models_loaded(self, upscale: int, face_enhance: bool, quality: str = 'balanced') -> None:
-        """Ensure required models are loaded with quality-based selection."""
+    def _ensure_models_loaded(self, upscale: int, face_enhance: bool, quality: str = 'balanced', gfpgan_version: str = 'auto') -> None:
+        """Ensure required models are loaded with quality-based selection and GFPGAN version."""
         # Select model variant based on quality setting
         quality_settings = self._get_quality_settings(quality)
         model_variant = quality_settings.get('model_variant', 'standard')
@@ -164,13 +166,64 @@ class ImageProcessor:
         
         # Load GFPGAN model if needed
         if face_enhance and not self.model_manager.is_gfpgan_loaded():
-            if model_variant == 'light':
-                # Try lightweight GFPGAN first
-                if not self.model_manager.load_gfpgan_model(model_type='light'):
-                    # Fallback to standard model
-                    self.model_manager.load_gfpgan_model()
+            # Resolve GFPGAN version based on user selection or auto-selection
+            resolved_version = self._resolve_gfpgan_version(gfpgan_version, quality, model_variant)
+            
+            if resolved_version:
+                # Load specific version
+                if not self.model_manager.load_gfpgan_model(version=resolved_version):
+                    # Fallback to auto-selection based on model_variant
+                    if model_variant == 'light':
+                        self.model_manager.load_gfpgan_model(model_type='light')
+                    else:
+                        self.model_manager.load_gfpgan_model()
             else:
-                self.model_manager.load_gfpgan_model()
+                # Legacy behavior for backward compatibility
+                if model_variant == 'light':
+                    # Try lightweight GFPGAN first
+                    if not self.model_manager.load_gfpgan_model(model_type='light'):
+                        # Fallback to standard model
+                        self.model_manager.load_gfpgan_model()
+                else:
+                    self.model_manager.load_gfpgan_model()
+    
+    def _resolve_gfpgan_version(self, gfpgan_version: str, quality: str, model_variant: str) -> Optional[str]:
+        """
+        Resolve GFPGAN version based on user selection and quality settings.
+        
+        Enhanced auto-selection includes Real-ESRGAN x4 + GFPGAN v1.4 for high-quality upscaling
+        with efficient face enhancement.
+        
+        Args:
+            gfpgan_version: User-specified version ('v1.3', 'v1.4', 'auto')
+            quality: Quality level ('fast', 'balanced', 'best')
+            model_variant: Model variant ('standard', 'light')
+            
+        Returns:
+            Resolved version ('v1.3', 'v1.4') or None for legacy behavior
+        """
+        if gfpgan_version in ['v1.3', 'v1.4']:
+            # Direct version specification
+            self.logger.info(f"Using GFPGAN {gfpgan_version} (user-specified)")
+            return gfpgan_version
+        
+        elif gfpgan_version == 'auto':
+            # Auto-selection based on quality and performance preferences
+            if quality == 'fast':
+                # Speed optimized: Real-ESRGAN x2 + GFPGAN v1.4
+                self.logger.info("Auto-selected GFPGAN v1.4 for fast quality (speed optimized)")
+                return 'v1.4'
+            elif quality == 'best':
+                # Maximum quality: Real-ESRGAN x4 + GFPGAN v1.3
+                self.logger.info("Auto-selected GFPGAN v1.3 for best quality (maximum quality)")
+                return 'v1.3'
+            elif quality == 'balanced':
+                # Enhanced balanced mode: Real-ESRGAN x4 + GFPGAN v1.4 for high-quality upscaling with efficient face enhancement
+                self.logger.info("Auto-selected GFPGAN v1.4 for balanced quality (high-quality upscaling with efficient face enhancement)")
+                return 'v1.4'
+        
+        # Return None for legacy behavior
+        return None
     
     def _get_quality_settings(self, quality: str) -> Dict[str, Any]:
         """Get quality-specific settings."""

@@ -37,6 +37,7 @@ class BatchProcessor:
         upscale: int = 4,
         face_enhance: bool = True,
         output_format: str = 'jpg',
+        gfpgan_version: str = 'auto',
         recursive: bool = True
     ) -> int:
         """
@@ -100,7 +101,8 @@ class BatchProcessor:
                         quality=quality,
                         upscale=upscale,
                         face_enhance=face_enhance,
-                        output_format=output_format
+                        output_format=output_format,
+                        gfpgan_version=gfpgan_version
                     )
                     
                     if success:
@@ -236,7 +238,8 @@ class BatchProcessor:
                         quality=quality,
                         upscale=upscale,
                         face_enhance=face_enhance,
-                        output_format=output_format
+                        output_format=output_format,
+                        gfpgan_version=gfpgan_version
                     )
                     
                     if success:

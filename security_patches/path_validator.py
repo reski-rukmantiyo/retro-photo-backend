@@ -64,6 +64,9 @@ class SecurePathValidator:
         """
         Validate and return a safe absolute path.
         
+        Enhanced to allow legitimate relative paths within project boundaries
+        while preventing actual security threats.
+        
         Args:
             user_path: Path provided by user
             base_path: Optional base directory to resolve relative paths
@@ -74,14 +77,7 @@ class SecurePathValidator:
         Raises:
             PathSecurityError: If path validation fails
         """
-        # Check for dangerous patterns
-        for pattern in self.DANGEROUS_PATTERNS:
-            if re.search(pattern, user_path):
-                raise PathSecurityError(
-                    f"Potentially dangerous path pattern detected: {pattern}"
-                )
-        
-        # Normalize the path
+        # First, resolve the path to see where it actually points
         if base_path:
             # Resolve relative to base path
             normalized = os.path.normpath(os.path.join(base_path, user_path))
@@ -92,6 +88,27 @@ class SecurePathValidator:
         # Convert to absolute path
         abs_path = os.path.abspath(normalized)
         
+        # Now apply security checks to the resolved absolute path
+        # Check for dangerous patterns in the RESOLVED path
+        dangerous_resolved_patterns = [
+            r'/etc/',        # System configuration
+            r'/proc/',       # Process information
+            r'/sys/',        # System information  
+            r'/dev/',        # Device files
+            r'/root/',       # Root home directory
+            r'/boot/',       # Boot files
+            r'\.ssh/',       # SSH keys
+            r'\.bashrc',     # Shell configuration
+            r'\.bash_profile',
+            r'/var/log/',    # System logs
+        ]
+        
+        for pattern in dangerous_resolved_patterns:
+            if re.search(pattern, abs_path, re.IGNORECASE):
+                raise PathSecurityError(
+                    f"Access to system directory blocked: {abs_path}"
+                )
+        
         # Check if path is within allowed directories
         if self.allowed_base_paths:
             is_allowed = False
@@ -101,8 +118,11 @@ class SecurePathValidator:
                     break
             
             if not is_allowed:
+                # Provide helpful error message
                 raise PathSecurityError(
-                    f"Path outside allowed directories: {abs_path}"
+                    f"Path outside allowed directories: {abs_path}\n"
+                    f"Allowed directories: {', '.join(self.allowed_base_paths)}\n"
+                    f"💡 Tip: Use absolute paths or ensure your file is within the project directory"
                 )
         
         # Check for symbolic links (could lead outside allowed paths)

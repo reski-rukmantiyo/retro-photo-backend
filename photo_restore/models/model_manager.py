@@ -351,15 +351,30 @@ class ModelManager:
         
         return SafeGFPGANWrapper(gfpgan_model, self.logger)
     
-    def load_gfpgan_model(self, model_type: str = 'standard') -> bool:
-        """Load GFPGAN face restoration model."""
+    def load_gfpgan_model(self, model_type: str = 'standard', version: str = None) -> bool:
+        """
+        Load GFPGAN face restoration model with version support.
+        
+        Args:
+            model_type: 'standard' or 'light' (legacy)
+            version: 'v1.3', 'v1.4', or None (auto-select based on model_type)
+            
+        Returns:
+            Success status
+        """
         try:
-            # Skip if already loaded
-            if self._gfpgan_model is not None:
+            # Skip if already loaded (but allow version switching)
+            if self._gfpgan_model is not None and version is None:
                 return True
             
-            # Select model based on type
-            model_key = 'gfpgan_light' if model_type == 'light' else 'gfpgan'
+            # Select model based on version or type
+            if version == 'v1.3':
+                model_key = 'gfpgan'
+            elif version == 'v1.4':
+                model_key = 'gfpgan_light'
+            else:
+                # Legacy model_type selection for backward compatibility
+                model_key = 'gfpgan_light' if model_type == 'light' else 'gfpgan'
             
             # Download model if needed
             if not self.download_model(model_key):
@@ -397,6 +412,9 @@ class ModelManager:
                 
                 # Wrap with safe tensor processor to prevent JIT-related issues
                 self._gfpgan_model = self._create_safe_gfpgan_wrapper(self._gfpgan_model)
+                
+                # Track which model version was loaded
+                self._current_gfpgan_key = model_key
                 
             except Exception as e:
                 self.logger.error(f"Failed to create GFPGAN model: {str(e)}")
@@ -451,6 +469,17 @@ class ModelManager:
     def get_gfpgan_model(self):
         """Get GFPGAN model instance."""
         return self._gfpgan_model
+    
+    def get_gfpgan_version(self) -> Optional[str]:
+        """Get the currently loaded GFPGAN model version."""
+        if not self.is_gfpgan_loaded():
+            return None
+        
+        # Check which model was loaded based on the last model key used
+        if hasattr(self, '_current_gfpgan_key'):
+            return 'v1.3' if self._current_gfpgan_key == 'gfpgan' else 'v1.4'
+        
+        return None
     
     def unload_models(self) -> None:
         """Unload all models to free memory."""
