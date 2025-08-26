@@ -1,0 +1,139 @@
+{
+  "platform_info": {
+    "system": "darwin",
+    "machine": "arm64",
+    "release": "24.5.0",
+    "python_version": "3.13.3 (main, Apr  8 2025, 13:54:08) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "platform_string": "macOS-15.5-arm64-arm-64bit-Mach-O",
+    "compatibility_tier": "tier2_limited"
+  },
+  "system_dependencies": {
+    "build_tools": {
+      "gcc": {
+        "available": true,
+        "type": "command_check",
+        "version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+        "error": null
+      },
+      "g++": {
+        "available": true,
+        "type": "command_check",
+        "version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+        "error": null
+      },
+      "make": {
+        "available": true,
+        "type": "command_check",
+        "version": "GNU Make 3.81",
+        "error": null
+      },
+      "cmake": {
+        "available": false,
+        "type": "not_found",
+        "error": "Command not found"
+      }
+    },
+    "python_dev": {
+      "python_headers": {
+        "available": false,
+        "type": "file_check",
+        "path": "/usr/include/python3.13"
+      },
+      "pip": {
+        "available": true,
+        "type": "command_check",
+        "version": "pip 25.2 from /Volumes/Apps/home/reski/Documents/Github/retro-photo-backend/venv/lib/python3.13/site-packages/pip (python 3.13)",
+        "error": null
+      },
+      "setuptools": {
+        "available": false,
+        "type": "command_check",
+        "version": null,
+        "error": "  File \"<string>\", line 1\n    \"import\n    ^\nSyntaxError: unterminated string literal (detected at line 1)\n"
+      }
+    },
+    "optional": {
+      "git": {
+        "available": true,
+        "type": "command_check",
+        "version": "git version 2.49.0",
+        "error": null
+      },
+      "curl": {
+        "available": true,
+        "type": "command_check",
+        "version": "curl 8.7.1 (x86_64-apple-darwin24.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.64.0",
+        "error": null
+      },
+      "wget": {
+        "available": false,
+        "type": "not_found",
+        "error": "Command not found"
+      }
+    }
+  },
+  "ml_compatibility": {
+    "pytorch": {
+      "cpu_support": true,
+      "recommended_version": ">=1.9.0,<2.0.0",
+      "installation_method": "conda_preferred"
+    },
+    "basicsr": {
+      "native_support": false,
+      "requires_compilation": true,
+      "success_probability": "medium",
+      "alternatives": [
+        "manual_implementation",
+        "docker"
+      ]
+    },
+    "realesrgan": {
+      "dependency_on_basicsr": true,
+      "fallback_available": true
+    },
+    "gfpgan": {
+      "dependency_on_basicsr": true,
+      "fallback_available": true
+    }
+  },
+  "recommendations": {
+    "platform": "tier2_limited",
+    "primary_strategy": "conda_environment",
+    "fallback_strategies": [
+      "docker",
+      "manual_implementation"
+    ],
+    "system_preparation": [
+      "brew install cmake gcc"
+    ],
+    "warnings": [
+      "BasicSR compilation may fail - manual implementation recommended"
+    ],
+    "confidence": "medium"
+  },
+  "platform_guide": {
+    "platform_detected": {
+      "system": "darwin",
+      "machine": "arm64",
+      "release": "24.5.0",
+      "python_version": "3.13.3 (main, Apr  8 2025, 13:54:08) [Clang 17.0.0 (clang-1700.0.13.3)]",
+      "platform_string": "macOS-15.5-arm64-arm-64bit-Mach-O",
+      "compatibility_tier": "tier2_limited"
+    },
+    "installation_guide": {
+      "primary_method": "conda_environment",
+      "steps": [
+        "Install Miniconda/Anaconda",
+        "Create isolated environment",
+        "Install PyTorch via conda",
+        "Install remaining packages via pip",
+        "Test functionality"
+      ],
+      "fallback_options": [
+        "docker",
+        "manual_implementation"
+      ],
+      "troubleshooting": []
+    }
+  }
+}

@@ -1,0 +1,14 @@
+include README.md
+include LICENSE
+include requirements.txt
+include pyproject.toml
+recursive-include photo_restore *.py
+recursive-include photo_restore/config *.yaml
+recursive-include photo_restore/config *.yml
+exclude tests/*
+exclude *.pyc
+exclude .git*
+exclude venv/*
+exclude __pycache__/*
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
